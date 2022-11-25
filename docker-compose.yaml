@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  server:
+    image: nginx:stable-alpine
+    ports:
+      - '8000:80'
+    volumes:
+      - ./src:/var/www/html
+      - ./nginx:/etc/nginx/conf.d
+    depends_on:
+      - php
+      - mysql
+  php:
+    build: ./dockerfiles/php
+    volumes:
+      - ./src:/var/www/html
+  mysql:
+    image: mysql:5.7
+    env_file:
+      - ./env/mysql.env
+  composer:
+    build: ./dockerfiles/composer
+    command:
+          - /bin/sh
+          - -c
+          - |
+            composer install
+#           php artisan migrate:fresh
+            
+    volumes:
+      - ./src:/app
+  npm:
+    image: node
+    volumes:
+      - ./src:/var/www/html
+    depends_on:
+      - composer
+    working_dir: /var/www/html
+    command:
+          - /bin/sh
+          - -c
+          - |
+            npm install
+            npm run build
+            npm run dev
+            
+  server2:
+    image: nginx:stable-alpine
+    ports:
+      - '8001:80'
+    volumes:
+      - ./src2:/var/www/html
+      - ./nginx2/:/etc/nginx/conf.d
+    depends_on:
+      - php2
+      - mysql
+  php2:
+    build: ./dockerfiles/php
+    volumes:
+      - ./src2:/var/www/html
+  composer2:
+    build: ./dockerfiles/composer
+    command:
+          - /bin/sh
+          - -c
+          - |
+            composer install
+#           php artisan migrate:fresh
+            
+    volumes:
+      - ./src2:/app
+  npm2:
+    image: node
+    volumes:
+      - ./src2:/var/www/html
+    depends_on:
+      - composer2
+    working_dir: /var/www/html
+    command:
+          - /bin/sh
+          - -c
+          - |
+            npm install
+            npm run build
+            npm run dev
+  adminer:
+    image: adminer
+    ports:
+      - "8002:8080"
+    depends_on:
+      - mysql
+  mc:
+    image: itzg/minecraft-server
+    environment:
+      EULA: "true"
+    ports:
+      - "25565:25565"
+    volumes:
+      - data:/data
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+  surprise:
+    image: kale5/rickroll
+    ports:
+      - '666:80'
+volumes:
+  data: {}
